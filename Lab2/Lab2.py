@@ -7,7 +7,7 @@
 from nltk.corpus import stopwords
 from stemming.porter2 import stem
 import nltk
-file_content = open("collections/sample.txt").read()
+file_content = open("collections/trec.sample.txt").read()
 tokens = nltk.word_tokenize(file_content)
 tokens = [token.lower() for token in tokens if token.isalpha() and token not in stopwords.words('english')]
 #tokens = [stem(token) for token in tokens]
@@ -15,7 +15,7 @@ tokens = [token for token in tokens if token != "id" and token != "text"]
 output = set(tokens)
 tokens = list(output)
 
-with open("collections/sample.txt") as fp:
+with open("collections/trec.sample.txt") as fp, open("preprocess.txt", "w") as fr:
     lis = []
     for line in fp:
         if line[0] != "I":
@@ -26,27 +26,28 @@ with open("collections/sample.txt") as fp:
         for ele in lis:
             #Break out the words in the line, convert to lowercase and preprocess
             linewo = nltk.word_tokenize(ele)
-            linewo = [wo.lower() for wo in linewo if wo.isalpha() and wo != "text"]
-            #For each word in each line
-            for lineword in linewo:
-                #Convert the word to lower first
-                lineword = lineword.lower()
-                #Word is equal to our word
-                if (word == lineword):
-                    #if the document index exists in the list
-                    doc_index = (lis.index(ele) + 1)
-                    word_index = (linewo.index(lineword))
-                    if (doc_index not in dict):
-                        dict[doc_index] = [word_index]
-                    else:
-                        dict[doc_index].append(word_index)
-        print ("\n")
+            linewo = [wo for wo in linewo if wo!="TEXT" and wo != "HEADLINE"]
+            linewo = [wo.lower() for wo in linewo if wo.isalpha()]
+            #Here we sa
+            doc_index = (lis.index(ele) + 1)
+            #If the word is in the document, add all of its positions
+            if word in linewo:
+                dict[doc_index] = [i for i, x in enumerate(linewo) if x == word]
+        #print (word)
+        #print (dict)
+        #Calculating the total occurences in all documents
         sum = 0
         for x in dict:
             sum = sum + len(dict[x])
-        print (str(word) + ":" + " " + str(sum))
-        print (dict)
-    print ("\n")
+        #Writing the word and the
+        fr.write (str(word) + ":" + " " + "(" + str(sum) + ")")
+        fr.write ("\n")
+        for x in dict:
+            fr.write(str(x) + " ")
+            fr.write("(" + str(len(dict[x])) + ")" + ":" + " ")
+            fr.write(",".join([str(i) for i in dict[x]]))
+            fr.write("\n")
+        fr.write("\n")
 
 
 f = open("output.txt", "a")
