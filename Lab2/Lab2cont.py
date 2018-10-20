@@ -123,6 +123,8 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                             #If we have found the second word in the dictionary
                             for y in dict:
                                 if y == phraselist[1]:
+                                    print (phraselist[0])
+                                    print (phraselist[1])
                                     #For all the document IDs in the first  phrase word
                                     #If it is in the list of document IDs for the second phrase word
                                     for srdoc in dict[x]:
@@ -130,10 +132,12 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                                             #Use that document ID to check the list of occurences
                                             #x + 1 because the first word in the phrase will be
                                             #before the second word in the document
-                                            indexlis = [x+1 for x in dict[x][srdoc]]
-                                            findlis = [x for x in dict[y][srdoc]]
+                                            #print(x)
+                                            #print(srdoc)
+                                            indexlis = [a+1 for a in dict[x][srdoc]]
+                                            findlis = [b for b in dict[y][srdoc]]
                                             #If both the lists contain the same position, we have a phrase match
-                                            if len([x for x in indexlis if x in findlis]) != 0:
+                                            if len([c for c in indexlis if c in findlis]) != 0:
                                                 #If we have already found one document ID for this phrase
                                                 #extend that list with more indexes
                                                 if (retrievedocs[retrivindex]):
@@ -146,12 +150,12 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                     continue
 
                 elif(words[i] == "AND"):
-                    andor = 0
+                    andor = 1
                     i = i + 1
                     continue
 
                 elif(words[i] == "OR"):
-                    andor = 1
+                    andor = 2
                     i = i + 1
                     continue
 
@@ -173,9 +177,14 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
 
             #After we have parsed through the entire query
             finalist = []
+            #If we have no ANDs/ORs in the list
             if (andor == 0):
-                finalist = list(set(retrievedocs[0]) & set(retrievedocs[1]))
+                finalist = retrievedocs[0]
+            #If AND, take an intersection
             elif (andor == 1):
+                finalist = list(set(retrievedocs[0]) & set(retrievedocs[1]))
+            #If OR, take an union
+            elif (andor == 2):
                 finalist = list(set().union(retrievedocs[0], retrievedocs[1]))
 
             #Write the document IDs to the file
@@ -214,7 +223,13 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                                     for a in indexlis:
                                         for b in findlis:
                                             if abs(a-b) <=15:
-                                                retrievedocs[0].extend(srdoc)
+                                                #If we have already found one document ID for this phrase
+                                                #extend that list with more indexes
+                                                if (retrievedocs[0]):
+                                                    retrievedocs[0].extend([srdoc])
+                                                #if we haven't, create a list of indexes
+                                                else:
+                                                    retrievedocs.insert(0, [srdoc])
 
             #Write the document IDs to the file
             for docs in retrievedocs[0]:
