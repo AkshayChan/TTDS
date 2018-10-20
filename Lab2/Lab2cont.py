@@ -97,9 +97,10 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                 #We take out the documents containing this word
                 #By subtracting the list of documents containing this word from the list of all document IDs
                 if (words[i] == "NOT"):
-                    nextwor = words[i+1]
+                    nextwor = words[i].split()[1]
                     nextwor = nextwor.lower()
                     nextwor = stem(nextwor)
+                    print(nextwor)
                     #Retrivindex can be updated inside the loop since we will only find the word once.
                     #Subtract the list of documents containing the word from list of all documents
                     for x in dict:
@@ -216,8 +217,8 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                             for srdoc in dict[x]:
                                 if srdoc in dict[y].keys():
                                     #Use that document ID to check the list of occurences
-                                    indexlis = [x for x in dict[x][srdoc]]
-                                    findlis = [x for x in dict[y][srdoc]]
+                                    indexlis = [a for a in dict[x][srdoc]]
+                                    findlis = [b for b in dict[y][srdoc]]
                                     #If the difference in position for any two ocurences is less than 15
                                     #We have a proximity match
                                     for a in indexlis:
