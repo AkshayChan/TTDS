@@ -53,7 +53,7 @@ with open("CW1collection/trec.5000.txt") as fp, open("preprocess.txt", "w") as f
                 dict[wo].update({doc_index: [i + 1 for i, x in enumerate(linewo) if x == wo]})
 
     #Write the first file
-    '''
+
     for x in dict:
             #Writing the word
             fr.write (str(x) + ":")
@@ -64,7 +64,7 @@ with open("CW1collection/trec.5000.txt") as fp, open("preprocess.txt", "w") as f
                 fr.write(str(y) + ":" + " ")
                 fr.write(",".join([str(i) for i in dict[x][y]]))
                 fr.write("\n")
-            fr.write("\n")'''
+            fr.write("\n")
 
 fp.close()
 fr.close()
@@ -84,6 +84,7 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
     for query in qlis:
         retrievedocs = [[]]
         retrivindex = 0
+        #print(query[0])
 
         #If we have a Boolean seach query
         if "AND" in query or "OR" in query or "NOT" in query:
@@ -96,19 +97,20 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                 #Here we cover the NOT word condition, and iterate the counter by 2 then continue
                 #We take out the documents containing this word
                 #By subtracting the list of documents containing this word from the list of all document IDs
-                if (words[i] == "NOT"):
+                if (words[i][0:3] == "NOT"):
                     nextwor = words[i].split()[1]
                     nextwor = nextwor.lower()
                     nextwor = stem(nextwor)
+                    print ("Got the NOT word")
                     print(nextwor)
                     #Retrivindex can be updated inside the loop since we will only find the word once.
                     #Subtract the list of documents containing the word from list of all documents
                     for x in dict:
                         if x == nextwor:
                             docslist = list(set(idlist) - set(dict[x].keys()))
-                            retrievedocs.insert(retrivindex, dict[x].keys())
+                            retrievedocs.insert(retrivindex, docslist)
                     retrivindex = retrivindex + 1
-                    i = i + 2
+                    i = i + 1
                     continue
 
                 #Here we cover the phrase condition
@@ -124,6 +126,7 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                             #If we have found the second word in the dictionary
                             for y in dict:
                                 if y == phraselist[1]:
+                                    print ("Phrase search inside AND OR")
                                     print (phraselist[0])
                                     print (phraselist[1])
                                     #For all the document IDs in the first  phrase word
@@ -169,7 +172,7 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                     #Retrivindex can be updated inside the loop since we will only find the word once.
                     for x in dict:
                         if x == wor:
-                            print (retrivindex)
+                            print ("Got the individual words")
                             print (x)
                             retrievedocs.insert(retrivindex, dict[x].keys())
                     retrivindex = retrivindex + 1
@@ -189,23 +192,28 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                 finalist = list(set().union(retrievedocs[0], retrievedocs[1]))
 
             #Write the document IDs to the file
-            for docs in finalist:
-                    fil.write (str(docs) + ",")
+            fil.write(",".join([str(i) for i in finalist]))
             fil.write("\n")
 
         #Here we implement proximity search. We first extract the number out from the query
         #Then we get the individual words and search for the common document
         #containg both words, the same way we did phrase search
         elif (query[0] == "#"):
+
             #Get the number out by splitting on the opening bracket and replacing the hash
             proxindex = query.split('(')[0]
             proxindex = proxindex.replace('#', '')
+            print(proxindex)
+
             #Replace the comma between the words with a space and split on that.
             proxwords = query.replace('#', '').replace('(', '').replace(')', '').replace(',', ' ')
+            proxwords = re.sub('\d', '', proxwords)
             proxlist = proxwords.split()
+
             #Then do the preprocessing on the words
             proxlist = [prh.lower() for prh in proxlist]
             proxlist = [stem(prh) for prh in proxlist]
+            print(proxlist)
             for x in dict:
                 #If we have found the first word in the dictionary
                 if x == proxlist[0]:
@@ -223,7 +231,7 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                                     #We have a proximity match
                                     for a in indexlis:
                                         for b in findlis:
-                                            if abs(a-b) <=15:
+                                            if abs(int(a)-int(b)) <=proxindex:
                                                 #If we have already found one document ID for this phrase
                                                 #extend that list with more indexes
                                                 if (retrievedocs[0]):
@@ -233,8 +241,48 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                                                     retrievedocs.insert(0, [srdoc])
 
             #Write the document IDs to the file
-            for docs in retrievedocs[0]:
-                    fil.write (str(docs) + ",")
+            fil.write(",".join([str(i) for i in retrievedocs[0]]))
+            fil.write("\n")
+
+        #The case where we simply find a phrase just like this
+        elif (query[0] == "\""):
+            #Remove the quotes in the string and preprocess
+            phrasewords = query.replace('"', '')
+            phraselist = phrasewords.split()
+            phraselist = [prh.lower() for prh in phraselist]
+            phraselist = [stem(prh) for prh in phraselist]
+            for x in dict:
+                #If we have found the first word in the dictionary
+                if x == phraselist[0]:
+                    #If we have found the second word in the dictionary
+                    for y in dict:
+                        if y == phraselist[1]:
+                            print ("Phrase search only - Got the words")
+                            print (phraselist[0])
+                            print (phraselist[1])
+                            #For all the document IDs in the first  phrase word
+                            #If it is in the list of document IDs for the second phrase word
+                            for srdoc in dict[x]:
+                                if srdoc in dict[y].keys():
+                                    #Use that document ID to check the list of occurences
+                                    #x + 1 because the first word in the phrase will be
+                                    #before the second word in the document
+                                    #print(x)
+                                    #print(srdoc)
+                                    indexlis = [a+1 for a in dict[x][srdoc]]
+                                    findlis = [b for b in dict[y][srdoc]]
+                                    #If both the lists contain the same position, we have a phrase match
+                                    if len([c for c in indexlis if c in findlis]) != 0:
+                                        #If we have already found one document ID for this phrase
+                                        #extend that list with more indexes
+                                        if (retrievedocs[0]):
+                                            retrievedocs[0].extend([srdoc])
+                                        #if we haven't, create a list of indexes
+                                        else:
+                                            retrievedocs.insert(0, [srdoc])
+
+            #Write the document IDs to the file
+            fil.write(",".join([str(i) for i in retrievedocs[0]]))
             fil.write("\n")
 
         #We have a simple string only to match
@@ -248,6 +296,5 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                     retrievedocs[0] = dict[x].keys()
 
             #Write the document IDs to the file
-            for docs in retrievedocs[0]:
-                    fil.write (str(docs) + ",")
+            fil.write(",".join([str(i) for i in retrievedocs[0]]))
             fil.write("\n")
