@@ -1,7 +1,10 @@
-from nltk.corpus import stopwords
 from stemming.porter2 import stem
 import nltk
 import re
+import math
+import operator
+
+#idlist has the list of all the document ids
 idlist = []
 
 #The dictionary here has the word as keys, and another dictionary as the values
@@ -9,9 +12,11 @@ idlist = []
 #the document as value
 dict = {}
 
+stopwordsli = []
+
 '''Module 1 - creating the indexes for the words in the document'''
 
-with open("CW1collection/trec.5000.txt") as fp, open("preprocess.txt", "w") as fr:
+with open("CW1collection/trec.5000.txt") as fp, open("preprocess.txt", "w") as fr, open ("CW1collection/stopwords.txt") as fil:
 
     #Get all the lines in the document in a dictionary with ID as key and HEADLINE/TEXT as value
     lis = {}
@@ -27,9 +32,10 @@ with open("CW1collection/trec.5000.txt") as fp, open("preprocess.txt", "w") as f
             lis.update({line[4:].rstrip() : headtext})
             idlist.append(line[4:].rstrip())
 
-    #The dictionary here has the word as keys, and another dictionary as the values
-    #Which have the document IDs as keys and a list of occurences for that word in
-    #the document as value
+    for lines in fil:
+        stopwordsli.append(lines.rstrip())
+
+    print(stopwordsli)
 
     #For each of the text lines (documents) (headline plus text)
     for ele in lis:
@@ -37,8 +43,8 @@ with open("CW1collection/trec.5000.txt") as fp, open("preprocess.txt", "w") as f
         #Break out the words in the line, convert to lowercase and preprocess (alphanumeric, lowercase, stopwrods, stemming)
         linewo = nltk.word_tokenize(lis[ele])
         linewo = [wo for wo in linewo if wo!="TEXT" and wo != "HEADLINE"]
-        linewo = [wo.lower() for wo in linewo if wo.isalpha() or wo.isdigit() and wo not in stopwords.words('english')]
-        linewo = [stem(wo) for wo in linewo]
+        linewo = [wo.lower() for wo in linewo if wo.isalpha() or wo.isdigit()]
+        linewo = [stem(wo) for wo in linewo if wo not in stopwordsli]
 
         #Here we get the respective document index
         doc_index = ele
@@ -71,9 +77,10 @@ fr.close()
 
 '''Module 2 - reloading the index into memory and running boolean, phrase and prximity search'''
 
-with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as fq, open("output.txt", "w") as fil:
+with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as fq, open("results.boolean.txt", "w") as fil:
 
     qlis = []
+    j = 1
 
     #First we extract the queries and remove the newline in the beginning
     for line in fq:
@@ -192,8 +199,9 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                 finalist = list(set().union(retrievedocs[0], retrievedocs[1]))
 
             #Write the document IDs to the file
-            fil.write(",".join([str(i) for i in finalist]))
-            fil.write("\n")
+            finalist = sorted(list(set(finalist)))
+            for fid in finalist:
+                fil.write(str(j) + " " + "0" + " " + str(fid) + " " + "0" + " " + "1" + " " + "0" + "\n")
 
         #Here we implement proximity search. We first extract the number out from the query
         #Then we get the individual words and search for the common document
@@ -241,8 +249,9 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                                                     retrievedocs.insert(0, [srdoc])
 
             #Write the document IDs to the file
-            fil.write(",".join([str(i) for i in retrievedocs[0]]))
-            fil.write("\n")
+            finalist = sorted(list(set(retrievedocs[0])))
+            for fid in finalist:
+                fil.write(str(j) + " " + "0" + " " + str(fid) + " " + "0" + " " + "1" + " " + "0" + "\n")
 
         #The case where we simply find a phrase just like this
         elif (query[0] == "\""):
@@ -282,8 +291,9 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                                             retrievedocs.insert(0, [srdoc])
 
             #Write the document IDs to the file
-            fil.write(",".join([str(i) for i in retrievedocs[0]]))
-            fil.write("\n")
+            finalist = sorted(list(set(retrievedocs[0])))
+            for fid in finalist:
+                fil.write(str(j) + " " + "0" + " " + str(fid) + " " + "0" + " " + "1" + " " + "0" + "\n")
 
         #We have a simple string only to match
         else:
@@ -296,5 +306,73 @@ with open("preprocess.txt") as fr,  open("CW1collection/queries.boolean.txt") as
                     retrievedocs[0] = dict[x].keys()
 
             #Write the document IDs to the file
-            fil.write(",".join([str(i) for i in retrievedocs[0]]))
-            fil.write("\n")
+            finalist = sorted(list(set(retrievedocs[0])))
+            for fid in finalist:
+                fil.write(str(j) + " " + "0" + " " + str(fid) + " " + "0" + " " + "1" + " " + "0" + "\n")
+
+        j = j + 1
+
+    fr.close()
+    fp.close()
+    fil.close()
+    #End of the module doing phrase, proximity and boolean search
+
+''' Module 3, reloading the index into memory and creating the ranked IR '''
+
+with open("preprocess.txt") as fr,  open("CW1collection/queries.ranked.txt") as fq, open("results.ranked.txt", "w") as fil:
+
+    qlis = []
+
+    #First we extract the queries and remove the newline in the end
+    for line in fq:
+        queries = line.split(" ", 1)
+        qlis.append(queries[1].rstrip())
+
+    i = 1
+    #Iterating through the query
+    for query in qlis:
+
+        tflist = {}
+        #Preprocess the words
+        wordsq = query.split()
+        wordsq = [wor.lower() for wor in wordsq]
+        wordsq = [stem(wor) for wor in wordsq if wor not in stopwordsli]
+
+        #Replace any special characters in the word first
+        for wor in wordsq:
+            for char in wor:
+                if char in "?.!/;:":
+                    wor = wor.replace(char,'')
+
+        #iterating through the list of all documents
+        for idn in idlist:
+            tfsum = 0
+            for wor in wordsq:
+                for x in dict:
+                    if x == wor:
+                        #If the document ID is in the IDs for our word
+                        if idn in dict[x].keys():
+                             #Document frequency is simply the number of documents the term occured in
+                             dffreq = len(dict[x].keys())
+                             #Term frequency for that document is the total times the term occured in this document
+                             tffreq = len(dict[x][idn])
+                             #Adding the frequency for this term to the tfidf sum for the document
+                             tfsum = tfsum + ((1 + math.log10(tffreq)) * math.log10(len(idlist)/dffreq))
+                             tfsum = round(tfsum, 4)
+            #Write every single tfidf of every matched document to the file
+            if tfsum != 0:
+                tflist.update({idn: tfsum})
+
+        #Have a list of tuples to make sure it is sorted
+        sorted_dicdata = sorted(tflist.items(), key=operator.itemgetter(1),reverse=True)
+
+        #Write the values to the file
+        #Make sure we don't have more than 1000 results per query
+        res = 0
+        for ite,val in sorted_dicdata:
+            if (res < 1000):
+                fil.write(str(i) + " " + "0" + " " + str(ite) + " " + "0" + " " + str(val) + " " + "0" + "\n")
+            res = res + 1
+        i = i + 1
+
+print (len(dict.keys()))
