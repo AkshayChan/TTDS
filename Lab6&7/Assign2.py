@@ -62,19 +62,26 @@ for i in dictir:
 
     filename = "S" + str(i) + ".eval"
     fq = open(filename, "a")
-    fq.write("        ")
+    fq.write("\t")
     fq.write("P@10")
-    fq.write("    ")
+    fq.write("\t")
     fq.write("R@50")
-    fq.write("    ")
+    fq.write("\t")
     fq.write("r-Precision")
-    fq.write("    ")
+    fq.write("\t")
     fq.write("AP")
-    fq.write("    ")
+    fq.write("\t")
     fq.write("nDCG@10")
-    fq.write("    ")
+    fq.write("\t")
     fq.write("nDCG@20")
     fq.write("\n")
+
+    meanp10 = 0.0
+    meanr50 = 0.0
+    meanrp = 0.0
+    meanap = 0.0
+    meandc10 = 0.0
+    meandc20 = 0.0
 
     #Each query
     for j in dictir[i]:
@@ -82,10 +89,10 @@ for i in dictir:
         #Formatting of the file
         if (j == 10):
             fq.write(str(j))
-            fq.write("      ")
+            fq.write("\t")
         else:
             fq.write(str(j))
-            fq.write("       ")
+            fq.write("\t")
 
 
         #Precision at 10
@@ -95,9 +102,10 @@ for i in dictir:
             if dictir[i][j][k][0] in retr[j]:
                 precsum = precsum + 1
         #What fraction of the retrieved documents are relevant?
-        precsum = format(precsum/10.0, '.2f')
+        meanp10 = meanp10 + precsum/10.0
+        precsum = format(precsum/10.0, '.3f')
         fq.write(str(precsum))
-        fq.write("    ")
+        fq.write("\t")
 
 
         #Recall at 50
@@ -107,10 +115,11 @@ for i in dictir:
             if dictir[i][j][k][0] in retr[j]:
                 recsum = recsum + 1
         #What fraction of the relevant documents are retrieved?
-        recsum = round(float(recsum)/len(retr[j]), 2)
-        recsum = format(recsum, '.2f')
+        meanr50 = meanr50 + float(recsum)/len(retr[j])
+        recsum = round(float(recsum)/len(retr[j]), 3)
+        recsum = format(recsum, '.3f')
         fq.write(str(recsum))
-        fq.write("    ")
+        fq.write("\t")
 
 
         #R - Precision
@@ -122,9 +131,10 @@ for i in dictir:
             if dictir[i][j][k][0] in retr[j]:
                 rpsum = rpsum + 1
         #What fraction of the retrieved documents are relevant?
-        rpsum = format(float(rpsum)/rpindex, '.2f')
+        meanrp = meanrp + float(rpsum)/rpindex
+        rpsum = format(float(rpsum)/rpindex, '.3f')
         fq.write(str(rpsum))
-        fq.write("           ")
+        fq.write("\t")
 
 
         #Average Precision
@@ -141,13 +151,15 @@ for i in dictir:
         #Divide by the total number of  relevant docs retrieved
         if (retcounter == 0):
             avgsum = 0.00
-            avgsum = format(avgsum, '.2f')
+            meanap = meanap + avgsum
+            avgsum = format(avgsum, '.3f')
         else:
             avgsum = avgsum/retcounter
-            avgsum = round(avgsum, 2)
-            avgsum = format(avgsum, '.2f')
+            meanap = meanap + avgsum
+            avgsum = round(avgsum, 3)
+            avgsum = format(avgsum, '.3f')
         fq.write(str(avgsum))
-        fq.write("    ")
+        fq.write("\t")
 
         #We have to sort out retr dictionary of related documents for queries to get the ideal gain at every step
         for x in retr:
@@ -186,10 +198,11 @@ for i in dictir:
                 #We do the log of the rank too
                 dcg = dcg + (float(gain)/math.log(k, 2.0))
                 idcg = idcg + (float(id_gain)/math.log(k, 2.0))
-        ndcg = round(dcg/idcg, 2)
-        ndcg = format(ndcg, '.2f')
+        ndcg = round(dcg/idcg, 3)
+        meandc10 = meandc10 + ndcg
+        ndcg = format(ndcg, '.3f')
         fq.write(str(ndcg))
-        fq.write("    ")
+        fq.write("\t")
 
         #nDCG@20
         #For getting the ID gain
@@ -223,8 +236,45 @@ for i in dictir:
                 #We do the log of the rank too
                 dcg = dcg + (float(gain)/math.log(k, 2.0))
                 idcg = idcg + (float(id_gain)/math.log(k, 2.0))
-        ndcg = round(dcg/idcg, 2)
-        ndcg = format(ndcg, '.2f')
+        ndcg = round(dcg/idcg, 3)
+        meandc20 = meandc20 + ndcg
+        ndcg = format(ndcg, '.3f')
         fq.write(str(ndcg))
-        fq.write("    ")
         fq.write("\n")
+
+    #Now we write the means here
+    fq.write("mean")
+    fq.write("\t")
+
+    #Average each mean by the number of queries and round them
+    meanp10 = meanp10/len(dictir[i])
+    meanp10 = round(meanp10, 3)
+    meanp10 = format(meanp10, '.3f')
+    meanr50 = meanr50/len(dictir[i])
+    meanr50 = round(meanr50, 3)
+    meanr50 = format(meanr50, '.3f')
+    meanrp = meanrp/len(dictir[i])
+    meanrp = round(meanrp, 3)
+    meanrp = format(meanrp, '.3f')
+    meanap = meanap/len(dictir[i])
+    meanap = round(meanap, 3)
+    meanap = format(meanap, '.3f')
+    meandc10 = meandc10/len(dictir[i])
+    meandc10 = round(meandc10, 3)
+    meandc10 = format(meandc10, '.3f')
+    meandc20 = meandc20/len(dictir[i])
+    meandc20 = round(meandc20, 3)
+    meandc20 = format(meandc20, '.3f')
+
+    #Now we write all of the means to the files
+    fq.write(str(meanp10))
+    fq.write("\t")
+    fq.write(str(meanr50))
+    fq.write("\t")
+    fq.write(str(meanrp))
+    fq.write("\t")
+    fq.write(str(meanap))
+    fq.write("\t")
+    fq.write(str(meandc10))
+    fq.write("\t")
+    fq.write(str(meandc20))
